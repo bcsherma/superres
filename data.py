@@ -12,7 +12,6 @@ class Div2K(Dataset):
         self.highres_root = highres_folder
         self.lowres_manifest = sorted(glob(path.join(self.lowres_root, "*.png")))
         self.highres_manifest = sorted(glob(path.join(self.highres_root, "*.png")))
-        print(len(self.lowres_manifest), len(self.highres_manifest))
         assert len(self.lowres_manifest) == len(self.highres_manifest)
 
     def __len__(self):
@@ -20,6 +19,6 @@ class Div2K(Dataset):
 
     def __getitem__(self, index):
         return {
-            "highres": read_image(self.highres_manifest[index]),
-            "lowres": read_image(self.lowres_manifest[index]),
+            "highres": read_image(self.highres_manifest[index]).float(),
+            "lowres": read_image(self.lowres_manifest[index]).float(),
         }
