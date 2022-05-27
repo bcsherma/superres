@@ -1,3 +1,10 @@
+# Zips
+*.zip
+
+# Ignore data
+div2k/
+data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
