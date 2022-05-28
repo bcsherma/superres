@@ -1,6 +1,12 @@
 # Zips
 *.zip
 
+# Ignore wandb dir
+wandb/
+
+# Log files from pytorch lightning
+lightning_logs/
+
 # Ignore data
 div2k/
 data/
