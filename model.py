@@ -6,12 +6,14 @@ Vanilla PyTorch implementation from https://github.com/yjn870/RDN-pytorch
 was used as starter code.
 """
 
-import pytorch_lightning as ptl
+import pytorch_lightning as pl
 import torch
 from torch import nn
 
+import wandb
 
-class ResidualDenseNetwork(ptl.LightningModule):
+
+class ResidualDenseNetwork(pl.LightningModule):
     """ """
 
     def __init__(
@@ -28,10 +30,11 @@ class ResidualDenseNetwork(ptl.LightningModule):
         self.growth_rate = growth_rate
         self.num_blocks = num_blocks
         self.num_layers = num_layers
+        self.loss = nn.L1Loss()
 
         # shallow feature extraction
-        self.sfe1 = nn.Conv2d(num_channels, num_features, kernel_size=3, padding=3 // 2)
-        self.sfe2 = nn.Conv2d(num_features, num_features, kernel_size=3, padding=3 // 2)
+        self.sfe1 = nn.Conv2d(num_channels, num_features, kernel_size=3, padding=1)
+        self.sfe2 = nn.Conv2d(num_features, num_features, kernel_size=3, padding=1)
 
         # residual dense blocks
         self.rdbs = nn.ModuleList(
@@ -47,9 +50,7 @@ class ResidualDenseNetwork(ptl.LightningModule):
             nn.Conv2d(
                 self.growth_rate * self.num_blocks, self.num_features, kernel_size=1
             ),
-            nn.Conv2d(
-                self.num_features, self.num_features, kernel_size=3, padding=3 // 2
-            ),
+            nn.Conv2d(self.num_features, self.num_features, kernel_size=3, padding=1),
         )
 
         # up-sampling
@@ -81,7 +82,7 @@ class ResidualDenseNetwork(ptl.LightningModule):
             )
 
         self.output = nn.Conv2d(
-            self.num_features, num_channels, kernel_size=3, padding=3 // 2
+            self.num_features, num_channels, kernel_size=3, padding=1
         )
 
     def forward(self, x):
@@ -94,10 +95,37 @@ class ResidualDenseNetwork(ptl.LightningModule):
             x = self.rdbs[i](x)
             local_features.append(x)
 
-        x = self.gff(torch.cat(local_features, 1)) + sfe1  # global residual learning
+        x = self.gff(torch.cat(local_features, 1)) + sfe1
         x = self.upscale(x)
         x = self.output(x)
         return x
+
+    def training_step(self, batch):
+        inputs = batch["lowres"]
+        labels = batch["highres"]
+        preds = self(inputs)
+        loss = self.loss(preds, labels)
+        self.log("train/loss", loss, on_step=True)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        lowres = batch["lowres"]
+        highres = batch["highres"]
+        preds = self(lowres)
+        loss = self.loss(preds, highres)
+        for lr, hr, pr in zip(lowres, highres, preds):
+            self.table.add_data(wandb.Image(lr), wandb.Image(hr), wandb.Image(pr))
+
+        self.log("val_loss", loss)
+
+    def on_validation_start(self) -> None:
+        self.table = wandb.Table(columns=["lowres", "highres", "superres"])
+
+    def on_validation_end(self):
+        self.logger.experiment.log({"predictions": self.table}, commit=False)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters())
 
 
 class ResidualDenseBlock(nn.Module):
