@@ -64,7 +64,7 @@ class ResidualDenseNetwork(pl.LightningModule):
                             self.num_features,
                             self.num_features * (2**2),
                             kernel_size=3,
-                            padding=3 // 2,
+                            padding=1,
                         ),
                         nn.PixelShuffle(2),
                     ]
@@ -76,7 +76,7 @@ class ResidualDenseNetwork(pl.LightningModule):
                     self.num_features,
                     self.num_features * (scale_factor**2),
                     kernel_size=3,
-                    padding=3 // 2,
+                    padding=1,
                 ),
                 nn.PixelShuffle(scale_factor),
             )
