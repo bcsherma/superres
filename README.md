@@ -1,2 +1,2 @@
 # superres
-Image super resolution from scratch
+Image super resolution (not) from scratch
