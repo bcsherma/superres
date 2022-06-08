@@ -8,8 +8,11 @@ from torchvision.transforms import CenterCrop
 
 
 class Div2K(Dataset):
-    def __init__(self, lowres_folder, highres_folder, size=30, center=False):
+    def __init__(
+        self, scale_factor, lowres_folder, highres_folder, size=30, center=False
+    ):
         super().__init__()
+        self.scale_factor = scale_factor
         self.size = size
         self.center = center
         self.lowres_root = lowres_folder
@@ -27,13 +30,17 @@ class Div2K(Dataset):
 
         if self.center:
             lowres = CenterCrop(size=self.size)(lowres)
-            highres = CenterCrop(size=2 * self.size)(highres)
+            highres = CenterCrop(size=self.scale_factor * self.size)(highres)
         else:
             x = random.randint(0, lowres.shape[2] - self.size)
             y = random.randint(0, lowres.shape[1] - self.size)
             lowres = lowres[..., y : y + self.size, x : x + self.size]
             highres = highres[
-                ..., 2 * y : 2 * y + 2 * self.size, 2 * x : 2 * x + 2 * self.size
+                ...,
+                self.scale_factor * y : self.scale_factor * y
+                + self.scale_factor * self.size,
+                self.scale_factor * x : self.scale_factor * x
+                + self.scale_factor * self.size,
             ]
 
         return {
