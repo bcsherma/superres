@@ -3,6 +3,7 @@
 
 # Ignore wandb dir
 wandb/
+artifacts/
 
 # Log files from pytorch lightning
 lightning_logs/
