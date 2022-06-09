@@ -80,7 +80,12 @@ def main():
         logger = WandbLogger(experiment=run)
         if config.log_grad:
             logger.watch(model, log_freq=config.log_grad)
-        trainer = pl.Trainer(precision=16, gpus=1, logger=logger, max_epochs=config.max_epochs)
+        trainer = pl.Trainer(
+            precision=config.precision,
+            gpus=1,
+            logger=logger,
+            max_epochs=config.max_epochs,
+        )
         trainer.fit(model, train_dl, val_dl)
 
 
