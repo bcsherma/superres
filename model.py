@@ -108,15 +108,14 @@ class ResidualDenseNetwork(pl.LightningModule):
         self.log("train/loss", loss, on_step=True)
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, _):
         lowres = batch["lowres"]
         highres = batch["highres"]
         preds = self(lowres)
         loss = self.loss(preds, highres)
         for lr, hr, pr in zip(lowres, highres, preds):
             self.table.add_data(wandb.Image(lr), wandb.Image(pr), wandb.Image(hr))
-
-        self.log("val_loss", loss)
+        self.log("val/loss", loss)
 
     def on_validation_start(self) -> None:
         self.table = wandb.Table(columns=["lowres", "superres", "highres"])
