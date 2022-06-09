@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument("--nfeatures", type=int, default=64)
     parser.add_argument("--nlayers", type=int, default=8)
     parser.add_argument("--patch_size", type=int, default=32)
+    parser.add_argument("--precision", type=int, default=32)
     parser.add_argument("--save_code", action="store_true")
     parser.add_argument("--train_batch_size", type=int, default=8)
     parser.add_argument("--val_batch_size", type=int, default=1)
@@ -79,7 +80,7 @@ def main():
         logger = WandbLogger(experiment=run)
         if config.log_grad:
             logger.watch(model, log_freq=config.log_grad)
-        trainer = pl.Trainer(gpus=1, logger=logger, max_epochs=config.max_epochs)
+        trainer = pl.Trainer(precision=16, gpus=1, logger=logger, max_epochs=config.max_epochs)
         trainer.fit(model, train_dl, val_dl)
 
 
