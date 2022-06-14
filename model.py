@@ -13,7 +13,7 @@ from torch import nn
 import wandb
 
 from torchmetrics import PeakSignalNoiseRatio
-
+from torch import optim
 
 class ResidualDenseNetwork(pl.LightningModule):
     """ """
@@ -26,7 +26,7 @@ class ResidualDenseNetwork(pl.LightningModule):
         num_layers,
         num_channels,
         scale_factor,
-        learning_rate
+        learning_rate,
     ) -> None:
         super().__init__()
         self.num_features = num_features
@@ -111,8 +111,8 @@ class ResidualDenseNetwork(pl.LightningModule):
         preds = self(lowres)
         loss = self.loss(preds, highres)
         psnr = self.psnr(preds, highres)
-        self.log("train/loss", loss)
-        self.log("train/psnr", psnr)
+        self.log("train/loss", loss, on_step=True)
+        self.log("train/psnr", psnr, on_step=True)
         return loss
 
     def validation_step(self, batch, _):
@@ -133,7 +133,14 @@ class ResidualDenseNetwork(pl.LightningModule):
         self.logger.experiment.log({"predictions": self.table}, commit=False)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(
+            optimizer, milestones=[i*50 for i in range(20)], gamma=0.5
+        )
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": lr_scheduler
+        }
 
 
 class ResidualDenseBlock(nn.Module):
