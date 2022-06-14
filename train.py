@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument("--train_batch_size", type=int, default=8)
     parser.add_argument("--val_batch_size", type=int, default=1)
     parser.add_argument("--val_im_size", type=int, default=128)
+    parser.add_argument("--lr", type=float, default=1e-4)
     return parser.parse_args()
 
 
@@ -75,6 +76,7 @@ def main():
             config.nlayers,
             config.nchannels,
             config.scale_factor,
+            config.lr
         )
 
         logger = WandbLogger(experiment=run)
@@ -82,7 +84,7 @@ def main():
             logger.watch(model, log_freq=config.log_grad)
         trainer = pl.Trainer(
             precision=config.precision,
-            gpus=1,
+            gpus=-1,  # Use all available GPUs
             logger=logger,
             max_epochs=config.max_epochs,
         )

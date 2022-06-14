@@ -26,12 +26,14 @@ class ResidualDenseNetwork(pl.LightningModule):
         num_layers,
         num_channels,
         scale_factor,
+        learning_rate
     ) -> None:
         super().__init__()
         self.num_features = num_features
         self.growth_rate = growth_rate
         self.num_blocks = num_blocks
         self.num_layers = num_layers
+        self.learning_rate = learning_rate
         self.loss = nn.L1Loss()
         self.psnr = PeakSignalNoiseRatio(255)
 
@@ -131,7 +133,7 @@ class ResidualDenseNetwork(pl.LightningModule):
         self.logger.experiment.log({"predictions": self.table}, commit=False)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters())
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
 
 class ResidualDenseBlock(nn.Module):
