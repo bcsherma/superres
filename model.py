@@ -15,6 +15,7 @@ import wandb
 from torchmetrics import PeakSignalNoiseRatio
 from torch import optim
 
+
 class ResidualDenseNetwork(pl.LightningModule):
     """ """
 
@@ -34,8 +35,10 @@ class ResidualDenseNetwork(pl.LightningModule):
         self.num_blocks = num_blocks
         self.num_layers = num_layers
         self.learning_rate = learning_rate
-        self.loss = nn.L1Loss()
-        self.psnr = PeakSignalNoiseRatio(255)
+        self.train_loss = nn.L1Loss()
+        self.train_psnr = PeakSignalNoiseRatio(255)
+        self.val_loss = nn.L1Loss(reduction="none")
+        self.val_psnr = PeakSignalNoiseRatio(255, reduction=None, dim=(1, 2, 3))
 
         # shallow feature extraction
         self.sfe1 = nn.Conv2d(num_channels, num_features, kernel_size=3, padding=1)
@@ -109,8 +112,8 @@ class ResidualDenseNetwork(pl.LightningModule):
         lowres = batch["lowres"]
         highres = batch["highres"]
         preds = self(lowres)
-        loss = self.loss(preds, highres)
-        psnr = self.psnr(preds, highres)
+        loss = self.train_loss(preds, highres)
+        psnr = self.train_psnr(preds, highres)
         self.log("train/loss", loss, on_step=True)
         self.log("train/psnr", psnr, on_step=True)
         return loss
@@ -119,15 +122,24 @@ class ResidualDenseNetwork(pl.LightningModule):
         lowres = batch["lowres"]
         highres = batch["highres"]
         preds = self(lowres)
-        loss = self.loss(preds, highres)
-        psnr = self.psnr(preds, highres)
-        for lr, hr, pr in zip(lowres, highres, preds):
-            self.table.add_data(wandb.Image(lr), wandb.Image(pr), wandb.Image(hr))
-        self.log("val/loss", loss)
-        self.log("val/psnr", psnr)
+        loss = self.val_loss(preds, highres)
+        psnr = self.val_psnr(preds, highres)
+        for lr, hr, pr, ls, ps in zip(lowres, highres, preds, loss, psnr):
+            self.table.add_data(
+                self.logger.experiment.step,
+                wandb.Image(lr),
+                wandb.Image(pr),
+                wandb.Image(hr),
+                torch.mean(ls),
+                ps,
+            )
+        self.log("val/loss", torch.mean(loss))
+        self.log("val/psnr", torch.mean(psnr))
 
     def on_validation_start(self) -> None:
-        self.table = wandb.Table(columns=["lowres", "superres", "highres"])
+        self.table = wandb.Table(
+            columns=["step", "lowres", "superres", "highres", "l1_loss", "psnr"]
+        )
 
     def on_validation_end(self):
         self.logger.experiment.log({"predictions": self.table}, commit=False)
@@ -135,12 +147,9 @@ class ResidualDenseNetwork(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         lr_scheduler = optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=[i*50 for i in range(20)], gamma=0.5
+            optimizer, milestones=[i * 50 for i in range(20)], gamma=0.5
         )
-        return {
-            "optimizer": optimizer,
-            "lr_scheduler": lr_scheduler
-        }
+        return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 
 
 class ResidualDenseBlock(nn.Module):
