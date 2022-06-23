@@ -147,7 +147,7 @@ class ResidualDenseNetwork(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
         lr_scheduler = optim.lr_scheduler.MultiStepLR(
-            optimizer, milestones=[i * 50 for i in range(20)], gamma=0.5
+            optimizer, milestones=[i * 50 for i in range(1, 20)], gamma=0.5
         )
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler}
 

@@ -87,6 +87,7 @@ def main():
             gpus=-1,  # Use all available GPUs
             logger=logger,
             max_epochs=config.max_epochs,
+            callbacks=[pl.callbacks.LearningRateMonitor()]
         )
         trainer.fit(model, train_dl, val_dl)
 
