@@ -1,6 +1,9 @@
 # Ignore direnv
 *.envrc
 
+# Ignore vscode settings
+.vscode/
+
 # Zips
 *.zip
 
