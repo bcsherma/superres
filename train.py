@@ -3,6 +3,7 @@ from os import path
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
+import torch
 from torch.utils.data import DataLoader
 
 import wandb
@@ -12,10 +13,10 @@ from model import ResidualDenseNetwork
 
 def parse_args():
     parser = argparse.ArgumentParser("train.py")
-    parser.add_argument("dataset", type=str)
     parser.add_argument("--dl_workers", type=int, default=8)
     parser.add_argument("--growth_rate", type=int, default=64)
     parser.add_argument("--log_grad", type=int, default=0)
+    parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--max_epochs", type=int, default=1000)
     parser.add_argument("--nblocks", type=int, default=16)
     parser.add_argument("--nchannels", type=int, default=3)
@@ -24,10 +25,10 @@ def parse_args():
     parser.add_argument("--patch_size", type=int, default=32)
     parser.add_argument("--precision", type=int, default=32)
     parser.add_argument("--save_code", action="store_true")
-    parser.add_argument("--train_batch_size", type=int, default=8)
-    parser.add_argument("--val_batch_size", type=int, default=1)
+    parser.add_argument("--train_batch_size", type=int, default=16)
+    parser.add_argument("--val_batch_size", type=int, default=4)
     parser.add_argument("--val_im_size", type=int, default=128)
-    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("dataset", type=str)
     return parser.parse_args()
 
 
@@ -76,18 +77,28 @@ def main():
             config.nlayers,
             config.nchannels,
             config.scale_factor,
-            config.lr
+            config.lr,
         )
 
         logger = WandbLogger(experiment=run)
         if config.log_grad:
             logger.watch(model, log_freq=config.log_grad)
+
+        if torch.cuda.is_available():
+            accelerator = "gpu"
+            devices = -1
+        else:
+            accelerator = None
+            devices = None
+
         trainer = pl.Trainer(
             precision=config.precision,
-            gpus=-1,  # Use all available GPUs
             logger=logger,
+            accelerator=accelerator,
+            devices=devices,
             max_epochs=config.max_epochs,
-            callbacks=[pl.callbacks.LearningRateMonitor()]
+            enable_checkpointing=False,
+            callbacks=[pl.callbacks.LearningRateMonitor()],
         )
         trainer.fit(model, train_dl, val_dl)
 

@@ -38,7 +38,6 @@ class ResidualDenseNetwork(pl.LightningModule):
         self.train_loss = nn.L1Loss()
         self.train_psnr = PeakSignalNoiseRatio(255)
         self.val_loss = nn.L1Loss(reduction="none")
-        self.val_psnr = PeakSignalNoiseRatio(255, reduction=None, dim=(1, 2, 3))
 
         # shallow feature extraction
         self.sfe1 = nn.Conv2d(num_channels, num_features, kernel_size=3, padding=1)
@@ -123,26 +122,24 @@ class ResidualDenseNetwork(pl.LightningModule):
         highres = batch["highres"]
         preds = self(lowres)
         loss = self.val_loss(preds, highres)
-        psnr = self.val_psnr(preds, highres)
-        for lr, hr, pr, ls, ps in zip(lowres, highres, preds, loss, psnr):
+        for lr, hr, pr, ls in zip(lowres, highres, preds, loss):
             self.table.add_data(
                 self.logger.experiment.step,
                 wandb.Image(lr),
                 wandb.Image(pr),
                 wandb.Image(hr),
                 torch.mean(ls),
-                ps,
             )
         self.log("val/loss", torch.mean(loss))
-        self.log("val/psnr", torch.mean(psnr))
 
     def on_validation_start(self) -> None:
         self.table = wandb.Table(
-            columns=["step", "lowres", "superres", "highres", "l1_loss", "psnr"]
+            columns=["step", "lowres", "superres", "highres", "l1_loss"]
         )
 
     def on_validation_end(self):
         self.logger.experiment.log({"predictions": self.table}, commit=False)
+        del self.table
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.learning_rate)
