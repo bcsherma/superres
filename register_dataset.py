@@ -3,7 +3,7 @@ import wandb
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("register_dataset.py")
+    parser = argparse.ArgumentParser()
     parser.add_argument("bucket", type=str)
     parser.add_argument("scale_factor", type=int, default=4)
     return parser.parse_args()
