@@ -2,6 +2,7 @@ import argparse
 from os import path
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 import torch
 from torch.utils.data import DataLoader
@@ -13,11 +14,11 @@ from model import ResidualDenseNetwork
 
 def parse_args():
     parser = argparse.ArgumentParser("train.py")
-    parser.add_argument("--dl_workers", type=int, default=8)
+    parser.add_argument("--dl_workers", type=int, default=4)
     parser.add_argument("--growth_rate", type=int, default=64)
     parser.add_argument("--log_grad", type=int, default=0)
     parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--max_epochs", type=int, default=1000)
+    parser.add_argument("--max_epochs", type=int, default=200)
     parser.add_argument("--nblocks", type=int, default=16)
     parser.add_argument("--nchannels", type=int, default=3)
     parser.add_argument("--nfeatures", type=int, default=64)
@@ -80,9 +81,9 @@ def main():
             config.lr,
         )
 
-        logger = WandbLogger(experiment=run)
+        logger = WandbLogger(experiment=run, log_model="all")
         if config.log_grad:
-            logger.watch(model, log_freq=config.log_grad)
+            logger.watch(model, log_freq=config.log_grad, log_graph=False)
 
         if torch.cuda.is_available():
             accelerator = "gpu"
@@ -97,8 +98,12 @@ def main():
             accelerator=accelerator,
             devices=devices,
             max_epochs=config.max_epochs,
-            enable_checkpointing=False,
-            callbacks=[pl.callbacks.LearningRateMonitor()],
+            check_val_every_n_epoch=10,  # Run validation every 5 epochs
+            callbacks=[
+                LearningRateMonitor(),
+                ModelCheckpoint(every_n_epochs=10),
+                EarlyStopping(monitor="val/loss", mode="min")
+            ],
         )
         trainer.fit(model, train_dl, val_dl)
 
