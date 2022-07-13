@@ -13,7 +13,10 @@ def main():
 
     args = parse_args()
 
-    with wandb.init(job_type="register_data", config=args) as run:
+    wandb_settings = wandb.Settings(_disable_stats=True)
+    with wandb.init(
+        job_type="register_data", config=args, settings=wandb_settings
+    ) as run:
 
         config = run.config
         dataset = wandb.Artifact(
@@ -37,6 +40,7 @@ def main():
             name="train_lr",
         )
         run.log_artifact(dataset)
+
 
 if __name__ == "__main__":
     main()
