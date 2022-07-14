@@ -98,7 +98,7 @@ def main():
             accelerator=accelerator,
             devices=devices,
             max_epochs=config.max_epochs,
-            check_val_every_n_epoch=10,  # Run validation every 5 epochs
+            check_val_every_n_epoch=10,
             callbacks=[
                 LearningRateMonitor(),
                 ModelCheckpoint(every_n_epochs=10),
