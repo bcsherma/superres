@@ -1,0 +1,17 @@
+method: grid
+program: train.py
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - div2k:4x
+  - ${args}
+parameters:
+  nblocks:
+    values:
+      - 16
+      - 8
+  nlayers:
+    values:
+      - 4
+      - 8
